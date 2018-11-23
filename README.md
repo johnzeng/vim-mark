@@ -72,14 +72,14 @@ USAGE
                             If already on a mark: Clear the mark, like
                             <Leader>n.
     {Visual}<Leader>m       Mark or unmark the visual selection.
-    [N]<Leader>m            With [N], mark the word under the cursor with the
-                            named highlight group [N]. When that group is not
+    {N}<Leader>m            With {N}, mark the word under the cursor with the
+                            named highlight group {N}. When that group is not
                             empty, the word is added as an alternative match, so
                             you can highlight multiple words with the same color.
                             When the word is already contained in the list of
                             alternatives, it is removed.
 
-                            When [N] is greater than the number of defined mark
+                            When {N} is greater than the number of defined mark
                             groups, a summary of marks is printed. Active mark
                             groups are prefixed with "*" (or "M*" when there are
                             M pattern alternatives), the default next group with
@@ -104,13 +104,13 @@ USAGE
                             :nohlsearch.
                             Note: Marks that span multiple lines are not detected,
                             so the use of <Leader>n on such a mark will
-                            unintentionally remove all marks! Use
+                            unintentionally disable all marks! Use
                             {Visual}<Leader>r or :Mark {pattern} to clear
                             multi-line marks (or pass [N] if you happen to know
                             the group number).
-    [N]<Leader>n            Clear the marks represented by highlight group [N].
+    {N}<Leader>n            Clear the marks represented by highlight group {N}.
 
-    :[N]Mark                Clear the marks represented by highlight group [N].
+    :{N}Mark                Clear the marks represented by highlight group {N}.
     :[N]Mark[!] [/]{pattern}[/]
                             Mark or unmark {pattern}. Unless [N] is given, the
                             next free highlight group is used for marking.
@@ -415,6 +415,41 @@ override the default behavior of using 'ignorecase' by setting:
 
         let g:mwIgnoreCase = 0
 
+To exclude some tab pages, windows, or buffers / filetypes from showing mark
+highlightings (you can still "blindly" navigate to marks in there with the
+corresponding mappings), you can define a List of expressions or Funcrefs that
+are evaluated in every window; if one returns 1, the window will not show
+marks.
+
+    " Don't mark temp files, Python filetype, and scratch files as defined by
+    " a custom function.
+    let g:mwExclusionPredicates =
+    \   ['expand("%:p") =~# "/tmp"', '&filetype == "python", function('ExcludeScratchFiles')]
+
+By default, tab pages / windows / buffers that have t:nomarks / w:nomarks /
+b:nomarks with a true value are excluded. Therefore, to suppress mark
+highlighting in a buffer, you can simply
+
+    :let b:nomarks = 1
+
+If the predicate changes after a window has already been visible, you can
+update the mark highlighting by either:
+- switching tab pages back and forth
+- toggling marks on / off (via <Plug>MarkToggle)
+- :call mark#UpdateMark() (for current buffer)
+- :call mark#UpdateScope() (for all windows in the current tab page)
+
+This plugin uses matchadd() for the highlightings. Each mark group has its
+own priority, with higher group values having higher priority; i.e. going "on
+top". The maximum priority (used for the last defined mark group) can be
+changed via:
+
+    let g:mwMaxMatchPriority = -10
+
+For example when another plugin or customization also uses matches and you
+would like to change their relative priorities. The default is negative to
+step back behind the default search highlighting.
+
 You can use different mappings by mapping to the <Plug>Mark... mappings (use
 ":map <Plug>Mark" to list them all) before this plugin is sourced.
 
@@ -517,6 +552,13 @@ HISTORY
 - ENH: Choose a more correct insertion point with multiple alternatives for a
   mark by projecting the length of the existing and alternatives and the added
   pattern.
+- BUG: Regression: <Leader>n without {N} and not on an existing mark prints
+  error "Do not pass empty pattern to disable all marks".
+- ENH: Allow to exclude certain tab pages, windows, or buffers / filetypes
+  from showing mark highlightings via g:mwExclusionPredicates or (with the
+  default predicate) t:nomarks / w:nomarks / b:nomarks flags.
+- ENH: Allow to tweak the maximum match priority via g:mwMaxMatchPriority for
+  better coexistence with other customizations that use :match / matchadd().
   __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017

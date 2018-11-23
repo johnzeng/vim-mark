@@ -152,6 +152,10 @@ function! mark#NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
 	return -1
 endfunction
 
+function! mark#DefaultExclusionPredicate()
+	return (exists('b:nomarks') && b:nomarks) || (exists('w:nomarks') && w:nomarks) || (exists('t:nomarks') && t:nomarks)
+endfunction
+
 " Set match / clear matches in the current window.
 function! s:MarkMatch( indices, expr )
 	if ! exists('w:mwMatch')
@@ -187,48 +191,47 @@ function! s:MarkMatch( indices, expr )
 		let l:expr = (s:IsIgnoreCase(a:expr) ? '\c' : '') . a:expr
 
 		" To avoid an arbitrary ordering of highlightings, we assign a different
-		" priority based on the highlight group, and ensure that the highest
-		" priority is -10, so that we do not override the 'hlsearch' of 0, and still
-		" allow other custom highlightings to sneak in between.
-		let l:priority = -10 - s:markNum + 1 + l:index
+		" priority based on the highlight group.
+		let l:priority = g:mwMaxMatchPriority - s:markNum + 1 + l:index
 
 		let w:mwMatch[l:index] = matchadd('MarkWord' . (l:index + 1), l:expr, l:priority)
 	endif
 endfunction
 " Initialize mark colors in a (new) window.
-function! mark#UpdateMark()
-	let i = 0
-	while i < s:markNum
-		if ! s:enabled || empty(s:pattern[i])
-			call s:MarkMatch([i], '')
-		else
-			call s:MarkMatch([i], s:pattern[i])
+function! mark#UpdateMark( ... )
+	for l:Predicate in g:mwExclusionPredicates
+		if ingo#actions#EvaluateOrFunc(l:Predicate)
+			" The window may have had marks applied previously. Clear any
+			" existing matches.
+			call s:MarkMatch(range(s:markNum), '')
+
+			return
 		endif
-		let i += 1
-	endwhile
-endfunction
-" Set / clear matches in all windows.
-function! s:MarkScope( indices, expr )
-	" By entering a window, its height is potentially increased from 0 to 1 (the
-	" minimum for the current window). To avoid any modification, save the window
-	" sizes and restore them after visiting all windows.
-	let l:originalWindowLayout = winrestcmd()
-		let l:originalWinNr = winnr()
-		let l:previousWinNr = winnr('#') ? winnr('#') : 1
-			noautocmd windo call s:MarkMatch(a:indices, a:expr)
-		noautocmd execute l:previousWinNr . 'wincmd w'
-		noautocmd execute l:originalWinNr . 'wincmd w'
-	silent! execute l:originalWindowLayout
+	endfor
+
+	if a:0
+		call call('s:MarkMatch', a:000)
+	else
+		let i = 0
+		while i < s:markNum
+			if ! s:enabled || empty(s:pattern[i])
+				call s:MarkMatch([i], '')
+			else
+				call s:MarkMatch([i], s:pattern[i])
+			endif
+			let i += 1
+		endwhile
+	endif
 endfunction
 " Update matches in all windows.
-function! mark#UpdateScope()
+function! mark#UpdateScope( ... )
 	" By entering a window, its height is potentially increased from 0 to 1 (the
 	" minimum for the current window). To avoid any modification, save the window
 	" sizes and restore them after visiting all windows.
 	let l:originalWindowLayout = winrestcmd()
 		let l:originalWinNr = winnr()
 		let l:previousWinNr = winnr('#') ? winnr('#') : 1
-			noautocmd windo call mark#UpdateMark()
+			noautocmd windo call call('mark#UpdateMark', a:000)
 		noautocmd execute l:previousWinNr . 'wincmd w'
 		noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
@@ -252,7 +255,7 @@ function! s:EnableAndMarkScope( indices, expr )
 	if s:enabled
 		" Marks are already enabled, we just need to push the changes to all
 		" windows.
-		call s:MarkScope(a:indices, a:expr)
+		call mark#UpdateScope(a:indices, a:expr)
 	else
 		call s:MarkEnable(1)
 	endif
@@ -274,6 +277,18 @@ endfunction
 
 
 " Mark or unmark a regular expression.
+function! mark#Clear( groupNum )
+	if a:groupNum > 0
+		return mark#DoMark(a:groupNum, '')[0]
+	else
+		let l:markText = mark#CurrentMark()[0]
+		if empty(l:markText)
+			return mark#DoMark(a:groupNum)[0]
+		else
+			return mark#DoMark(a:groupNum, l:markText)[0]
+		endif
+	endif
+endfunction
 function! s:SetPattern( index, pattern )
 	let s:pattern[a:index] = a:pattern
 
@@ -299,7 +314,7 @@ function! mark#ClearAll()
 	" refresh, as we do the update ourselves.
 	call s:MarkEnable(0, 0)
 
-	call s:MarkScope(l:indices, '')
+	call mark#UpdateScope(l:indices, '')
 
 	if len(indices) > 0
 		echo 'Cleared all' len(indices) 'marks'
@@ -1114,6 +1129,7 @@ endfunction
 
 augroup Mark
 	autocmd!
+	autocmd BufWinEnter * call mark#UpdateMark()
 	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
 	autocmd TabEnter * call mark#UpdateScope()
 augroup END

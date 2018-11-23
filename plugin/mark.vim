@@ -66,6 +66,17 @@ if ! exists('g:mwDirectGroupJumpMappingNum')
 	let g:mwDirectGroupJumpMappingNum = 9
 endif
 
+if ! exists('g:mwExclusionPredicates')
+	let g:mwExclusionPredicates = [function('mark#DefaultExclusionPredicate')]
+endif
+
+if ! exists('g:mwMaxMatchPriority')
+	" Default the highest match priority to -10, so that we do not override the
+	" 'hlsearch' of 0, and still allow other custom highlightings to sneak in
+	" between.
+	let g:mwMaxMatchPriority = -10
+endif
+
 
 "- default highlightings ------------------------------------------------------
 
@@ -117,7 +128,7 @@ vnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#DoMark(v:count, ma
 vnoremap <silent> <Plug>MarkIWhiteSet         :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 vnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#Clear(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear          :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkConfirmAllClear   :<C-u>if confirm('Really delete all marks? This cannot be undone.', "&Yes\n&No") == 1<Bar>call mark#ClearAll()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkToggle            :<C-u>call mark#Toggle()<CR>
