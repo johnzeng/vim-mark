@@ -200,13 +200,13 @@ endfunction
 " Initialize mark colors in a (new) window.
 function! mark#UpdateMark( ... )
 	for l:Predicate in g:mwExclusionPredicates
-		if ingo#actions#EvaluateOrFunc(l:Predicate)
+"		if ingo#actions#EvaluateOrFunc(l:Predicate)
 			" The window may have had marks applied previously. Clear any
 			" existing matches.
-			call s:MarkMatch(range(s:markNum), '')
+"			call s:MarkMatch(range(s:markNum), '')
 
-			return
-		endif
+"			return
+"		endif
 	endfor
 
 	if a:0
@@ -370,7 +370,7 @@ endfunction
 " cleared. markGroupNum is the mark group number where the mark was set. It is 0
 " if the group was cleared.
 function! mark#DoMark( groupNum, ... )
-	call ingo#err#Clear()
+"	call ingo#err#Clear()
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again.
 		call mark#Init()

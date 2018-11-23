@@ -520,6 +520,11 @@ behavior:
     vmap <Plug>IgnoreMarkSet <Plug>MarkSet
     xmap <Leader>m <Plug>MarkIWhiteSet
 
+Finally, if you don't wanna use all features, you can diable all of them  and
+just set up part of mapping by settting:
+
+    let g:mark_disable_default_mapping=1
+
 INTEGRATION
 ------------------------------------------------------------------------------
 
